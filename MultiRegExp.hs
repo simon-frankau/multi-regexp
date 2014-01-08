@@ -22,6 +22,7 @@ module Main where
 
 import qualified Data.List as List
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 
 base :: Integer
 base = 10
@@ -61,11 +62,22 @@ showTransitions trans =
         concatMap (\(x, ys) -> map (x,) $ Map.toAscList ys) $
         Map.toAscList trans
 
-temp = FSM {
-    initState = "FOO",
-    endState = "BAR",
-    transitions = Map.fromList [("A", Map.fromList [("B", "C"), ("D", "E")]),
-                                ("F", Map.fromList [("G", "H"), ("I", "J")])] }
-                                
+-- We will name the states after the actual numbers modulo whatever.
+generateStateMachine :: Integer -> Integer -> Integer -> FSM (Set.Set Integer)
+generateStateMachine base modulus target =
+    FSM {
+        initState   = show 0,
+        endState    = show target,
+        transitions = Map.fromList $ map buildTrans [0..modulus-1]
+    } where
+        buildTrans n = (show n,
+                        Map.fromListWith Set.union $
+                            map (buildEdge n) [0..base-1])
+        buildEdge n b = (show $ (n * base + b) `mod` modulus,
+                         Set.singleton b)
+
+-- Nice, simple example.
+temp = generateStateMachine 10 3 0                                
 
 main = putStrLn $ show temp
+
