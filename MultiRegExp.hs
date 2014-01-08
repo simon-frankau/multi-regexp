@@ -76,8 +76,58 @@ generateStateMachine base modulus target =
         buildEdge n b = (show $ (n * base + b) `mod` modulus,
                          Set.singleton b)
 
+------------------------------------------------------------------------
+-- Generate regexps
+
+data RegExp = Terminal Symbol
+            | Concat [RegExp]
+            | Alt (Set.Set RegExp)
+            | Close RegExp
+	      deriving (Eq, Ord)
+
+instance Show RegExp where
+    show (Terminal x) = x:[]
+    show (Concat xs)  = "(" ++ concatMap show xs ++ ")"
+    show (Alt xs)     = "(" ++ List.intercalate "|"
+                               (map show $ Set.toList xs) ++ ")"
+    show (Close x)    = show x ++ "*"
+
+-- A few construction operators that simplify as we go...
+
+reConcat :: RegExp -> RegExp -> RegExp
+reConcat x y = Concat (unCat x ++ unCat y) where
+    unCat (Concat xs) = xs
+    unCat x = [x]
+
+reAlt :: RegExp -> RegExp -> RegExp
+reAlt x y = Alt (unAlt x `Set.union` unAlt y) where
+    unAlt (Alt xs) = xs
+    unAlt x = Set.singleton x
+
+reClose :: RegExp -> RegExp
+reClose x@(Close _) = x
+reClose x = Close x
+
+reNothing :: RegExp
+reNothing = Alt Set.empty
+
+reEverything :: RegExp
+reEverything = Concat []
+
+-- Convert our finite state machine to one where the edges are REs.
+
+-- FIXME
+
 -- Nice, simple example.
 temp = generateStateMachine 10 3 0                                
 
-main = putStrLn $ show temp
+-- And an example of an RE.
+a = Terminal 'a'
+b = Terminal 'b'
+c = Terminal 'c'
+
+temp2 = reClose $ reClose $ reAlt (reConcat a (reConcat a b)) (reAlt c c)
+
+main = do
+    putStrLn $ show temp
 
