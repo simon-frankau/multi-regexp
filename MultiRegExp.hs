@@ -220,18 +220,26 @@ solveFSM fsm =
     List.foldl' (flip elimState) fsm statesToElim where
         statesToElim = List.delete (initState fsm) $ getStates fsm
 
+-- Glue it all together
+genRE :: Integer -> Integer -> Integer -> String
+genRE base modulus target =
+    show $ solveFSM $ addFinalState $ convertStateMachine $
+        generateStateMachine base modulus target
+
 printRet :: Show a => a -> IO a
 printRet a = print a >> return a
 
 main = do
-    it <- printRet $ generateStateMachine 10 3 0
+--    it <- printRet $ generateStateMachine 10 3 0
+    it <- printRet $ generateStateMachine 10 17 0
     it <- printRet $ convertStateMachine it
     it <- printRet $ addFinalState it
     it <- printRet $ solveFSM it
     return ()
 
--- FIXME 2:
+-- FIXME:
 -- * Create a command-line wrapper to run it
 -- * Create a command-line wrapper to test it
 -- * Create some wrapper to gather stats. Gather and plot stats
 -- * Write up!
+-- * Use correct symbols for base > 10
