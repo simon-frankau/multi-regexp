@@ -173,6 +173,12 @@ elimState state fsm =
        substAllStates fsm = List.foldl' (flip $ substState state) fsm states
        states = Map.keys $ transitions fsm
 
+-- Extract the final result
+extractResult :: FSM RegExp -> RegExp
+extractResult fsm = transitions fsm ! initState fsm ! endState fsm
+
+-- Now, a very dumb solver for the entire FSM
+
 printRet :: Show a => a -> IO a
 printRet a = print a >> return a
 
@@ -183,11 +189,11 @@ main = do
     it <- printRet $ elimState "2" it
     it <- printRet $ elimState "1" it
     it <- printRet $ solveState "0" it
+    it <- printRet $ extractResult it
     return ()
 
 -- FIXME:
 -- * Write something to eliminate all but initial state
--- * Write result extractor
 
 -- FIXME 2:
 -- * Create a command-line wrapper to run it
