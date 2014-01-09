@@ -142,16 +142,16 @@ addFinalState fsm =
 -- alternation which is dumb but at least simple.
 --
 -- i.e. we do X = AX + BY + CZ -> X = A*BY + A*CZ, rather than A*(BY + CZ)
-solveState :: FSM RegExp -> State -> FSM RegExp
-solveState fsm state =
+solveState :: State -> FSM RegExp -> FSM RegExp
+solveState state fsm =
     fsm { transitions = Map.adjust solve state $ transitions fsm } where
         solve edges = case Map.lookup state edges of
             Just x  -> Map.map (reConcat (reClose x)) $ Map.delete state edges
             Nothing -> edges
 
 -- Then we implement substitution:
-substState :: FSM RegExp -> State -> State -> FSM RegExp
-substState fsm src tgt =
+substState :: State -> State -> FSM RegExp -> FSM RegExp
+substState src tgt fsm =
     fsm { transitions = Map.adjust subst tgt $ transitions fsm } where
         srcEdges = transitions fsm ! src
         subst tgtEdges = Map.unionWith reAlt tgtEdges' srcEdges' where
@@ -161,41 +161,31 @@ substState fsm src tgt =
                 Just re -> Map.map (reConcat re) srcEdges
 
 -- Remove a state that is no longer needed (no checks):
-deleteState :: FSM RegExp -> State -> FSM RegExp
-deleteState fsm state =
+deleteState :: State -> FSM RegExp -> FSM RegExp
+deleteState state fsm =
     fsm { transitions = Map.delete state $ transitions fsm }
 
--- Nice, simple example.
-temp = generateStateMachine 10 3 0                                
-
--- And an example of an RE.
-a = Terminal 'a'
-b = Terminal 'b'
-c = Terminal 'c'
-
-temp2 = reClose $ reClose $ reAlt (reConcat a (reConcat a b)) (reAlt c c)
+-- Eliminate a state: Solve it, substitute it into all other states,
+-- and delete it
+elimState :: State -> FSM RegExp -> FSM RegExp
+elimState state fsm =
+   deleteState state $ substAllStates $ solveState state fsm where
+       substAllStates fsm = List.foldl' (flip $ substState state) fsm states
+       states = Map.keys $ transitions fsm
 
 printRet :: Show a => a -> IO a
 printRet a = print a >> return a
 
 main = do
-    it <- printRet $ convertStateMachine temp
+    it <- printRet $ generateStateMachine 10 3 0
+    it <- printRet $ convertStateMachine it
     it <- printRet $ addFinalState it
-    it <- printRet $ solveState it "0"
-    it <- printRet $ solveState it "1"
-    it <- printRet $ solveState it "2"
-    it <- printRet $ substState it "2" "1"
-    it <- printRet $ solveState it "1"
-    it <- printRet $ substState it "2" "0"
-    it <- printRet $ deleteState it "2"
-    it <- printRet $ solveState it "0"
-    it <- printRet $ substState it "1" "0"
-    it <- printRet $ deleteState it "1"
-    it <- printRet $ solveState it "0"
+    it <- printRet $ elimState "2" it
+    it <- printRet $ elimState "1" it
+    it <- printRet $ solveState "0" it
     return ()
 
 -- FIXME:
--- * Add a function to eliminate a state
 -- * Write something to eliminate all but initial state
 -- * Write result extractor
 
