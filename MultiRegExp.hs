@@ -160,6 +160,11 @@ substState fsm src tgt =
                 Nothing -> Map.empty
                 Just re -> Map.map (reConcat re) srcEdges
 
+-- Remove a state that is no longer needed (no checks):
+deleteState :: FSM RegExp -> State -> FSM RegExp
+deleteState fsm state =
+    fsm { transitions = Map.delete state $ transitions fsm }
+
 -- Nice, simple example.
 temp = generateStateMachine 10 3 0                                
 
@@ -182,8 +187,10 @@ main = do
     it <- printRet $ substState it "2" "1"
     it <- printRet $ solveState it "1"
     it <- printRet $ substState it "2" "0"
+    it <- printRet $ deleteState it "2"
     it <- printRet $ solveState it "0"
     it <- printRet $ substState it "1" "0"
+    it <- printRet $ deleteState it "1"
     it <- printRet $ solveState it "0"
     return ()
 
