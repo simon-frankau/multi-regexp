@@ -25,6 +25,8 @@ import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
+import Data.Map ((!))
+
 base :: Integer
 base = 10
 
@@ -126,13 +128,24 @@ convertStateMachine fsm =
 -- solving of the states.
 
 -- First we implement solving:
-solveState :: FSM RegExp -> State -> FSM RegExp
 -- NB: Done in a horrible way that leads to blow-up.
+solveState :: FSM RegExp -> State -> FSM RegExp
 solveState fsm state =
     fsm { transitions = Map.adjust solve state $ transitions fsm } where
         solve edges = case Map.lookup state edges of
             Just x  -> Map.map (reConcat (reClose x)) $ Map.delete state edges
             Nothing -> edges
+
+-- Then we implement substitution:
+substState :: FSM RegExp -> State -> State -> FSM RegExp
+substState fsm src tgt =
+    fsm { transitions = Map.adjust subst tgt $ transitions fsm } where
+        srcEdges = transitions fsm ! src
+        subst tgtEdges = Map.unionWith reAlt tgtEdges' srcEdges' where
+            tgtEdges' = Map.delete src tgtEdges
+            srcEdges' = case Map.lookup src tgtEdges of
+                Nothing -> Map.empty
+                Just re -> Map.map (reConcat re) srcEdges
 
 -- Nice, simple example.
 temp = generateStateMachine 10 3 0                                
@@ -144,6 +157,30 @@ c = Terminal 'c'
 
 temp2 = reClose $ reClose $ reAlt (reConcat a (reConcat a b)) (reAlt c c)
 
-main = do
-    putStrLn $ show temp
+printRet :: Show a => a -> IO a
+printRet a = print a >> return a
 
+main = do
+    it <- printRet $ convertStateMachine temp
+    it <- printRet $ solveState it "0"
+    it <- printRet $ solveState it "1"
+    it <- printRet $ solveState it "2"
+    it <- printRet $ substState it "2" "1"
+    it <- printRet $ solveState it "1"
+    it <- printRet $ substState it "2" "0"
+    it <- printRet $ solveState it "0"
+    it <- printRet $ substState it "1" "0"
+    it <- printRet $ solveState it "0"
+    return ()
+
+-- FIXME:
+-- * Add an explicit terminal state
+-- * Add a function to eliminate a state
+-- * Write something to eliminate all but initial state
+-- * Write result extractor
+
+-- FIXME 2:
+-- * Create a command-line wrapper to run it
+-- * Create a command-line wrapper to test it
+-- * Create some wrapper to gather stats. Gather and plot stats
+-- * Write up!
