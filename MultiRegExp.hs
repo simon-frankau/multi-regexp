@@ -196,19 +196,29 @@ deleteState :: State -> FSM RegExp -> FSM RegExp
 deleteState state fsm =
     fsm { transitions = Map.delete state $ transitions fsm }
 
+-- Helper to get list of states
+getStates :: FSM RegExp -> [State]
+getStates = Map.keys . transitions
+
 -- Eliminate a state: Solve it, substitute it into all other states,
 -- and delete it
 elimState :: State -> FSM RegExp -> FSM RegExp
 elimState state fsm =
    deleteState state $ substAllStates $ solveState state fsm where
        substAllStates fsm = List.foldl' (flip $ substState state) fsm states
-       states = Map.keys $ transitions fsm
+       states = getStates fsm
 
 -- Extract the final result
 extractResult :: FSM RegExp -> RegExp
 extractResult fsm = transitions fsm ! initState fsm ! endState fsm
 
 -- Now, a very dumb solver for the entire FSM
+solveFSM :: FSM RegExp -> RegExp
+solveFSM fsm =
+    extractResult $
+    solveState (initState fsm) $
+    List.foldl' (flip elimState) fsm statesToElim where
+        statesToElim = List.delete (initState fsm) $ getStates fsm
 
 printRet :: Show a => a -> IO a
 printRet a = print a >> return a
@@ -217,14 +227,8 @@ main = do
     it <- printRet $ generateStateMachine 10 3 0
     it <- printRet $ convertStateMachine it
     it <- printRet $ addFinalState it
-    it <- printRet $ elimState "2" it
-    it <- printRet $ elimState "1" it
-    it <- printRet $ solveState "0" it
-    it <- printRet $ extractResult it
+    it <- printRet $ solveFSM it
     return ()
-
--- FIXME:
--- * Write something to eliminate all but initial state
 
 -- FIXME 2:
 -- * Create a command-line wrapper to run it
