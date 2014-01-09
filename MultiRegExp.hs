@@ -26,6 +26,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 import Data.Map ((!))
+import Data.Maybe (mapMaybe)
 
 base :: Integer
 base = 10
@@ -91,16 +92,46 @@ data RegExp = Terminal Symbol
 instance Show RegExp where
     show (Terminal x) = x:[]
     show (Concat xs)  = "(" ++ concatMap show xs ++ ")"
-    show (Alt xs)     = "(" ++ List.intercalate "|"
-                               (map show $ Set.toList xs) ++ ")"
+    show (Alt xs)     = buildAltStr (getTerms xs) (getNonTerms xs)
     show (Close x)    = show x ++ "*"
+
+getTerms :: Set.Set RegExp -> [Symbol]
+getTerms = mapMaybe getTerm . Set.toList where
+    getTerm (Terminal x) = Just x
+    getTerm _            = Nothing
+
+getNonTerms :: Set.Set RegExp -> [RegExp]
+getNonTerms = mapMaybe getNonTerm . Set.toList where
+    getNonTerm (Terminal _) = Nothing
+    getNonTerm x            = Just x
+
+buildAltStr :: [Symbol] -> [RegExp] -> String
+buildAltStr terms nonterms =
+    case (terms', nonterms') of
+        (Just t,  Nothing) -> t
+        (Nothing, Just nt) -> "(" ++ nt ++ ")"
+        (Just t,  Just nt) -> "(" ++ t ++ "|" ++ nt ++ ")"
+    where
+            terms' = case terms of
+                []    -> Nothing
+                x@[_] -> Just x
+                xs    -> Just $ "[" ++ xs ++ "]"
+            nonterms' = case nonterms of
+                [] -> Nothing
+                xs -> Just $ List.intercalate "|" $ map show xs
+
+isTerminal :: RegExp -> Bool
+isTerminal (Terminal _) = True
+isTerminal _            = False
 
 -- A few construction operators that simplify as we go...
 
 reConcat :: RegExp -> RegExp -> RegExp
-reConcat x y = Concat (unCat x ++ unCat y) where
+reConcat x y = conc (unCat x ++ unCat y) where
     unCat (Concat xs) = xs
     unCat x = [x]
+    conc [x] = x
+    conc xs  = Concat xs
 
 reAlt :: RegExp -> RegExp -> RegExp
 reAlt x y = Alt (unAlt x `Set.union` unAlt y) where
