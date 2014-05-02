@@ -239,8 +239,3 @@ main = do
     putStrLn $ case map read args of
         [base, modulus, target] -> genRE base modulus target
 	_ -> usage
-
--- FIXME:
--- * Create a command-line wrapper to test it
--- * Create some wrapper to gather stats. Gather and plot stats
--- * Write up!
