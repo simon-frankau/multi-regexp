@@ -80,7 +80,7 @@ data RegExp = Terminal Symbol
             | Concat [RegExp]
             | Alt (Set.Set RegExp)
             | Close RegExp
-	      deriving (Eq, Ord)
+              deriving (Eq, Ord)
 
 instance Show RegExp where
     show (Terminal x) = x:[]
@@ -152,7 +152,7 @@ convertStateMachine :: FSM (Set.Set Integer) -> FSM RegExp
 convertStateMachine fsm =
     fsm { transitions = Map.map convertTrans $ transitions fsm } where
           convertTrans = Map.map (Alt . Set.map makeTerm)
-  	  makeTerm = Terminal . getSym
+          makeTerm = Terminal . getSym
 
 -- Add an explicit terminal state, which simplifies later work.
 addFinalState :: FSM RegExp -> FSM RegExp
@@ -238,4 +238,4 @@ main = do
     args <- getArgs
     putStrLn $ case map read args of
         [base, modulus, target] -> genRE base modulus target
-	_ -> usage
+        _ -> usage
