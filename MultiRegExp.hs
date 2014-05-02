@@ -148,12 +148,18 @@ reNothing = Alt Set.empty
 reEverything :: RegExp
 reEverything = Concat []
 
+-- Get an appropriate character from a number
+getSym :: Integer -> Symbol
+getSym i = Char.chr $ symBase i + fromIntegral i where
+  symBase i | i < 10    = Char.ord '0'
+  symBase i | otherwise = Char.ord 'A' - 10
+
 -- Convert our finite state machine to one where the edges are REs.
 convertStateMachine :: FSM (Set.Set Integer) -> FSM RegExp
 convertStateMachine fsm =
     fsm { transitions = Map.map convertTrans $ transitions fsm } where
           convertTrans = Map.map (Alt . Set.map makeTerm)
-  	  makeTerm = Terminal . Char.chr . (Char.ord '0' +) . fromIntegral
+  	  makeTerm = Terminal . getSym
 
 -- Add an explicit terminal state, which simplifies later work.
 addFinalState :: FSM RegExp -> FSM RegExp
@@ -242,4 +248,3 @@ main = do
 -- * Create a command-line wrapper to test it
 -- * Create some wrapper to gather stats. Gather and plot stats
 -- * Write up!
--- * Use correct symbols for base > 10
