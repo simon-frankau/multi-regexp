@@ -28,14 +28,7 @@ import qualified Data.Set as Set
 import Data.Map ((!))
 import Data.Maybe (mapMaybe)
 
-base :: Integer
-base = 10
-
-modulus :: Integer
-modulus = 3
-
-target :: Integer
-target = 0
+import System.Environment (getArgs)
 
 ------------------------------------------------------------------------
 -- State machine generation
@@ -232,19 +225,22 @@ genRE base modulus target =
     show $ solveFSM $ addFinalState $ convertStateMachine $
         generateStateMachine base modulus target
 
-printRet :: Show a => a -> IO a
-printRet a = print a >> return a
+-- Nice usage message
+usage :: String
+usage = List.intercalate "\n" [
+    "Usage:",
+    "    MultiRegExp base modulus target",
+    "Prints a regexp which (only) matches all numbers (represented in ",
+    "base 'base') that are equal to 'target', modulo 'modulus'."]
 
+-- Entry point (duh :)
 main = do
---    it <- printRet $ generateStateMachine 10 3 0
-    it <- printRet $ generateStateMachine 10 17 0
-    it <- printRet $ convertStateMachine it
-    it <- printRet $ addFinalState it
-    it <- printRet $ solveFSM it
-    return ()
+    args <- getArgs
+    putStrLn $ case map read args of
+        [base, modulus, target] -> genRE base modulus target
+	_ -> usage
 
 -- FIXME:
--- * Create a command-line wrapper to run it
 -- * Create a command-line wrapper to test it
 -- * Create some wrapper to gather stats. Gather and plot stats
 -- * Write up!
